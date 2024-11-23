@@ -1,77 +1,70 @@
-# Micropython websockets (esp8266 implementation)
+# CircuitPython WebSocket Client
 
-An implementation of websockets for the ESP8266 (client only ATM). This is a
-work in progress, some of which might move into the modwebsocket C module
-that's built into micropython, however that's incomplete, and the handshaking
-isn't standard-compliant.
+A lightweight WebSocket client library for CircuitPython. This library allows you to connect to WebSocket servers, send and receive data, and handle WebSocket frames with ease.
 
-There's no asyncio on the esp8266 (today) but I'd like to build something that
-looks for all intents and purposes like a asyncio `Protocol` using the
-socket receive handler it does have.
+⚠️ **Work in Progress**: Some features may be incomplete or subject to change.
 
-## "Screenshot"
+## Installation
 
+1. Download the `cpwebsockets` folder from this repository and copy it to the root of your CircuitPython device.
+2. Install the required dependency:
+   - [`adafruit_logging`](https://github.com/adafruit/Adafruit_CircuitPython_Logging): Copy the `adafruit_logging` library to the `lib` folder on your CircuitPython device.
+
+### Folder Structure
+Your CircuitPython device should look like this:
 ```
-$ pip install adafruit-ampy
-$ ampy mkdir uwebsockets
-$ ampy put uwebsockets/protocol.py uwebsockets/protocol.py
-$ ampy put uwebsockets/client.py uwebsockets/client.py
-$ ampy run example/client.py
-> esp8266 1.5.4(baaeaebb) v1.8.3-80-g1f61fe0-dirty on 2016-08-31 ESP module with ESP8266
-< Hello esp8266 1.5.4(baaeaebb) v1.8.3-80-g1f61fe0-dirty on 2016-08-31 ESP module with ESP8266!
+code.py or
+example.py
+lib/
+└── adafruit_logging.mpy
+cpwebsockets/
+├── client.py
+└── protocol.py
 ```
+## Usage
 
-```
-$ pip install websockets
-$ python example/server.py
-Connection from ('192.168.1.11', 1883)
-< esp8266 1.5.4(baaeaebb) v1.8.3-80-g1f61fe0-dirty on 2016-08-31 ESP module with ESP8266
-> Hello esp8266 1.5.4(baaeaebb) v1.8.3-80-g1f61fe0-dirty on 2016-08-31 ESP module with ESP8266!
-```
+A minimal example is provided in the `example.py` file, demonstrating how to:
+- Connect to a WebSocket server (`wss://ws.postman-echo.com/raw`).
+- Send and receive messages.
+- Close the WebSocket connection gracefully.
 
-## Minimal example client against 'ws://echo.websocket.org/'
-
-
-```
-$ webrepl_client.py 192.168.3.1
-Password: 
-
-WebREPL connected
->>> 
->>> 
-MicroPython v1.9.4-272-g46091b8a on 2018-07-18; ESP module with ESP8266
-Type "help()" for more information.
->>> import echo_websocket_org
-The quick brown fox jumps over the lazy dog
-
->>> 
-### closed ###
-$ 
-$ cat echo_websocket_org.py 
-import uwebsockets.client
-websocket = uwebsockets.client.connect("ws://echo.websocket.org/")
-mesg = "The quick brown fox jumps over the lazy dog"
-websocket.send(mesg + "\r\n")
-resp = websocket.recv()
-print(resp)
-assert(mesg + "\r\n" == resp)
-$ 
-```
-
-# Micropython Socket.io
-
-An implementation of socket.io and engine.io for the ESP8266 (client only ATM).
-This is a work in progress and has only been tested against Flask-SocketIO.
-
-There's no asyncio on the esp8266 (today) but I'd like to build something that
-looks for all intents and purposes like the socket.io web API. At the moment
-this means its own event loop + lots of timeouts.
-
-An interesting example client is
-[this OpsGenie bridge](https://github.com/danni/micropython-opsgenie-bridge/tree/master/uclient).
+Simply copy the `example.py` file to your CircuitPython device and modify it as needed for your project.
 
 ## Compatibility
 
-You might need to bake this code into your firmware to use it. You also need
-to bake in the `logging` module. Finally to run the `unix` port you need to
-[patch your micropython to support `socket.settimeout`](https://github.com/danni/micropython/tree/2379-unix-settimeout).
+This library is designed to work with CircuitPython devices that support:
+- Wi-Fi connections (via `wifi.radio`).
+- TLS/SSL (for secure WebSocket connections using `wss://`).
+
+### Tested on:
+- [Lolin ESP32-S2](https://circuitpython.org/board/lolin_s2_mini/)
+- [Lolin ESP32-S3](https://circuitpython.org/board/lolin_s3_mini/)
+- [Raspberry Pi Pico RP2040 W](https://circuitpython.org/board/raspberry_pi_pico_w/)
+
+If you encounter compatibility issues on other devices, please create an issue in this repository.
+
+## Features
+
+- Support for both `ws://` and `wss://` WebSocket protocols.
+- Frame handling compliant with [RFC 6455](https://datatracker.ietf.org/doc/html/rfc6455).
+- Client masking for secure communications.
+- Text and binary message support.
+- Graceful connection close handling.
+
+## Known Issues & Limitations
+
+- Continuation frames (`_OP_CONT`) are not yet implemented.
+- The library has not been tested extensively on low-memory devices.
+- Minimal support for WebSocket extensions.
+
+## Contributing
+
+We welcome contributions! If you'd like to report a bug, suggest a feature, or submit a pull request, please open an issue in this repository. Ensure your contributions adhere to CircuitPython's design guidelines.
+
+## License
+
+This library is released under the MIT License.
+
+## Acknowledgments
+
+This library is a CircuitPython adaptation of [uwebsockets](https://github.com/danni/uwebsockets) by danni.

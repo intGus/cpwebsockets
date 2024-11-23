@@ -1,25 +1,40 @@
-"""
-Websockets client for micropython
+# SPDX-FileCopyrightText: © 2024 Gustavo Diaz <contact@gusdiaz.dev>
+#
+# SPDX-License-Identifier: MIT
 
-Based very heavily off
-https://github.com/aaugustin/websockets/blob/master/websockets/client.py
-"""
+# Websockets client for CircuitPython
+# Forked from: https://github.com/danni/uwebsockets
 
-import logging
-import usocket as socket
-import ubinascii as binascii
-import urandom as random
-import ussl
+import binascii
+import random
+import ssl
+import socketpool as socket
+import adafruit_logging as logging
 
 from .protocol import Websocket, urlparse
 
 LOGGER = logging.getLogger(__name__)
 
+def read_line(sock, buffer_size=1024):
+    """
+    Read a line from the socket using recv_into. Stops at '\r\n'.
+    """
+    buffer = bytearray(buffer_size)  # Pre-allocate buffer
+    line = b""
+    
+    while True:
+        bytes_read = sock.recv_into(buffer, 1)  # Read one byte at a time
+        if bytes_read == 0:
+            break  # End of stream
+        line += buffer[:bytes_read]
+        if line.endswith(b'\r\n'):  # Check for end of line
+            break
+    return line
 
 class WebsocketClient(Websocket):
     is_client = True
 
-def connect(uri):
+def connect(uri, radio):
     """
     Connect a websocket.
     """
@@ -30,15 +45,17 @@ def connect(uri):
     if __debug__: LOGGER.debug("open connection %s:%s",
                                 uri.hostname, uri.port)
 
-    sock = socket.socket()
-    addr = socket.getaddrinfo(uri.hostname, uri.port)
+    sock = socket.SocketPool(radio).socket()
+    addr = socket.SocketPool(radio).getaddrinfo(uri.hostname, uri.port)
     sock.connect(addr[0][4])
+    
     if uri.protocol == 'wss':
-        sock = ussl.wrap_socket(sock, server_hostname=uri.hostname)
+        ssl_context = ssl.create_default_context()
+        sock = ssl_context.wrap_socket(sock, server_hostname=uri.hostname)
 
     def send_header(header, *args):
         if __debug__: LOGGER.debug(str(header), *args)
-        sock.write(header % args + '\r\n')
+        sock.send(header % args + '\r\n')
 
     # Sec-WebSocket-Key is 16 bytes of random base64 encoded
     key = binascii.b2a_base64(bytes(random.getrandbits(8)
@@ -56,13 +73,13 @@ def connect(uri):
     )
     send_header(b'')
 
-    header = sock.readline()[:-2]
+    header = read_line(sock)[:-2]
     assert header.startswith(b'HTTP/1.1 101 '), header
 
     # We don't (currently) need these headers
     # FIXME: should we check the return key?
     while header:
         if __debug__: LOGGER.debug(str(header))
-        header = sock.readline()[:-2]
+        header = read_line(sock)[:-2]
 
     return WebsocketClient(sock)
